@@ -17,58 +17,40 @@
             <div class="header-text">
                 <div class="rkn-title">Роскомнадзор</div>
                 <div class="rkn-subtitle">Федеральная служба по надзору в сфере связи</div>
+                <div class="balance">Баланс: <span id="totalBalance">0 ₽</span></div>
             </div>
-            <div class="coins-display" id="coinsDisplay">0 ₽</div>
-        </div>
-        <div class="db-controls">
-            <button class="db-btn db-export" onclick="exportDatabase()">Экспортировать БД</button>
-            <button class="db-btn db-import" onclick="document.getElementById('importFileInput').click()">Импортировать БД</button>
-            <input type="file" id="importFileInput" accept=".rknbd,application/json" style="display:none">
+            <div class="control-buttons">
+                <button id="exportBtn" class="control-btn">Экспортировать БД</button>
+                <button id="importBtn" class="control-btn">Импортировать БД</button>
+                <input type="file" id="importFile" accept=".rknbd" style="display: none;">
+            </div>
         </div>
     </header>
-
     <main>
         <h1>ЧТО ЗАПРЕТИМ СЕГОДНЯ?</h1>
-
         <div class="roulette-container">
             <div class="pointer"></div>
-            <div class="roulette-track" id="track"></div>
-        </div>
-
-        <button class="spin-btn" id="spinBtn">КРУТИТЬ</button>
-    </main>
-
-    <a href="https://rilliat.ru" target="_blank" class="ad-banner">
-        <div class="ad-content">
-            <img src="static/img/AliceVPN.svg" alt="Logo" class="ad-logo-img">
-            <div>
-                <div class="ad-text-main">
-                    <span class="font-alice">АЛИСА</span> <span class="font-vpn">VPN</span>
-                </div>
-                <div class="ad-text-sub">загрузится всё</div>
+            <div class="roulette-track" id="track">
             </div>
         </div>
-        <div class="ad-arrow">➜</div>
-    </a>
-
+        <button class="spin-btn" id="spinBtn">КРУТИТЬ</button>
+    </main>
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-window" id="modalWindow">
             <div id="actionStep">
                 <img src="" alt="Service Logo" class="modal-img" id="modalImg">
                 <div class="modal-title" id="modalTitle">Service</div>
                 <div class="action-buttons">
-                    <button class="rkn-btn btn-restrict" onclick="applyPunishment('ОГРАНИЧЕНО', 1000)">Ограничить</button>
-                    <button class="rkn-btn btn-slow" onclick="applyPunishment('ЗАМЕДЛЕНО', 5000)">Замедлить</button>
-                    <button class="rkn-btn btn-ban" onclick="applyPunishment('ЗАБАНЕНО', 10000)">ЗАБАНИТЬ</button>
+                    <button class="rkn-btn btn-restrict" onclick="applyPunishment('ОГРАНИЧЕНО')">Ограничить</button>
+                    <button class="rkn-btn btn-slow" onclick="applyPunishment('ЗАМЕДЛЕНО')">Замедлить</button>
+                    <button class="rkn-btn btn-ban" onclick="applyPunishment('ЗАБАНЕНО')">ЗАБАНИТЬ</button>
                 </div>
             </div>
-
             <div id="resultStep" class="result-view">
                 <div class="result-status" id="statusText">ЗАБАНЕНО</div>
                 <div class="good-job">Сегодня вы хорошо потрудились</div>
                 <div class="salary" id="salaryAmount">0 ₽</div>
                 <div class="salary-label">ваша зарплата на сегодня</div>
-                <div class="total-coins">Всего монет: <span id="totalCoins">0 ₽</span></div>
                 <button class="result-btn btn-take" onclick="takeMoney()">Забрать деньги</button>
                 <button class="result-btn btn-again" onclick="resetRoulette()">Крутить ещё</button>
             </div>
