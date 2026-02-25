@@ -19,50 +19,15 @@ const servicesData = [
     { name: 'Epic Games', img: 'static/img/EpicGames.png' },
 ];
 
-const STORAGE_KEY = 'rknData_v2';
-const DEFAULT_DATA = {
-    coins: 0,
-    bannedServices: [],
-    lastBackup: null,
-    version: '1.0'
-};
-
-function initStorage() {
-    if (!localStorage.getItem(STORAGE_KEY)) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_DATA));
-    }
-    const data = getStorageData();
-    const now = Date.now();
-    if (!data.lastBackup || (now - data.lastBackup) > 86400000) {
-        autoBackup();
-    }
-}
-
-function getStorageData() {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || JSON.stringify(DEFAULT_DATA));
-    } catch (e) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_DATA));
-        return DEFAULT_DATA;
-    }
-}
-
-function setStorageData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    updateCoinsDisplay();
-}
-
-function updateCoinsDisplay() {
-    const data = getStorageData();
-    document.getElementById('coinsDisplay').textContent = `${data.coins.toLocaleString('ru-RU')} ₽`;
-    document.getElementById('totalCoins').textContent = `${data.coins.toLocaleString('ru-RU')} ₽`;
-}
-
 const cardWidth = 150;
 const track = document.getElementById('track');
 const spinBtn = document.getElementById('spinBtn');
 const modalOverlay = document.getElementById('modalOverlay');
 const modalWindow = document.getElementById('modalWindow');
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const importFile = document.getElementById('importFile');
+
 const modalImg = document.getElementById('modalImg');
 const modalTitle = document.getElementById('modalTitle');
 const actionStep = document.getElementById('actionStep');
@@ -73,17 +38,84 @@ const salaryAmount = document.getElementById('salaryAmount');
 let isSpinning = false;
 let generatedItems = [];
 
+function getBalance() {
+    const balance = localStorage.getItem('rkn_balance');
+    return balance ? parseInt(balance) : 0;
+}
+
+function setBalance(amount) {
+    localStorage.setItem('rkn_balance', amount);
+    updateBalanceDisplay();
+}
+
+function addBalance(amount) {
+    const current = getBalance();
+    setBalance(current + amount);
+}
+
+function updateBalanceDisplay() {
+    const balanceElement = document.getElementById('totalBalance');
+    if (balanceElement) {
+        balanceElement.textContent = getBalance().toLocaleString('ru-RU') + ' ₽';
+    }
+}
+
+function exportDB() {
+    const data = {
+        balance: getBalance(),
+        timestamp: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rkn_data.rknbd';
+    document.body.appendChild(a);
+    a.click();
+    
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 0);
+}
+
+function importDB() {
+    importFile.click();
+}
+
+importFile.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (typeof data.balance === 'number') {
+                setBalance(data.balance);
+                alert('Данные успешно импортированы!');
+            } else {
+                alert('Неверный формат файла');
+            }
+        } catch (err) {
+            alert('Ошибка при импорте: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+});
+
 function initRoulette() {
     let html = '';
     generatedItems = [];
     const totalItems = 100;
 
-    for (let i = 0; i < totalItems; i++) {
+    for(let i=0; i<totalItems; i++) {
         const randomService = servicesData[Math.floor(Math.random() * servicesData.length)];
         generatedItems.push(randomService);
 
         html += `
-            <div class="service-card">
+            <div class="service-card" style="width: 140px;">
                 <img src="${randomService.img}" class="service-img" alt="${randomService.name}">
                 <div>${randomService.name}</div>
             </div>
@@ -92,84 +124,18 @@ function initRoulette() {
     track.innerHTML = html;
 }
 
-function exportDatabase() {
-    const data = getStorageData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rkn-backup-${new Date().toISOString().slice(0, 10)}.rknbd`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showNotification('✅ База данных экспортирована!');
-    }, 0);
-}
-
-function autoBackup() {
-    const data = getStorageData();
-    data.lastBackup = Date.now();
-    setStorageData(data);
-    console.log('Авто-бэкап создан:', new Date().toISOString());
-}
-
-document.getElementById('importFileInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        try {
-            const importedData = JSON.parse(event.target.result);
-            
-            if (importedData.coins === undefined || importedData.bannedServices === undefined) {
-                throw new Error('Неверный формат файла');
-            }
-            
-            const backup = getStorageData();
-            localStorage.setItem('rknData_backup', JSON.stringify(backup));
-            
-            setStorageData(importedData);
-            showNotification('✅ База данных импортирована! Перезагрузка...');
-            setTimeout(() => location.reload(), 1500);
-        } catch (err) {
-            showNotification(`❌ Ошибка импорта: ${err.message}`);
-            console.error(err);
-        } finally {
-            e.target.value = '';
-        }
-    };
-    reader.readAsText(file);
-});
-
-function showNotification(message) {
-    const notif = document.createElement('div');
-    notif.className = 'notification';
-    notif.textContent = message;
-    document.body.appendChild(notif);
-    setTimeout(() => {
-        notif.classList.add('show');
-        setTimeout(() => {
-            notif.classList.remove('show');
-            setTimeout(() => document.body.removeChild(notif), 300);
-        }, 2000);
-    }, 10);
-}
-
-initStorage();
 initRoulette();
-updateCoinsDisplay();
 
 spinBtn.addEventListener('click', () => {
-    if (isSpinning) return;
+    if(isSpinning) return;
     isSpinning = true;
     spinBtn.disabled = true;
 
     track.style.transition = 'none';
     track.style.transform = 'translateX(0)';
+
     initRoulette();
+
     track.offsetHeight;
 
     const targetIndex = Math.floor(Math.random() * (90 - 70 + 1) + 70);
@@ -182,8 +148,9 @@ spinBtn.addEventListener('click', () => {
         track.style.transform = `translateX(-${pixelOffset}px)`;
     });
 
+    const winner = generatedItems[targetIndex];
+
     setTimeout(() => {
-        const winner = generatedItems[targetIndex];
         openModal(winner);
     }, 5000);
 });
@@ -195,35 +162,33 @@ function openModal(service) {
     modalWindow.className = 'modal-window';
     actionStep.style.display = 'block';
     resultStep.style.display = 'none';
+    
     modalOverlay.classList.add('active');
 }
 
-window.applyPunishment = function(type, reward) {
+window.applyPunishment = function(type) {
     actionStep.style.display = 'none';
     resultStep.style.display = 'block';
     modalWindow.classList.add('punished');
     
     statusText.textContent = type;
-    salaryAmount.textContent = reward.toLocaleString('ru-RU') + ' ₽';
 
-    const data = getStorageData();
-    data.coins += reward;
-    data.bannedServices.push({
-        service: modalTitle.textContent,
-        punishment: type,
-        reward: reward,
-        timestamp: Date.now()
-    });
-    setStorageData(data);
+    const salary = Math.floor(Math.random() * (100 - 10 + 1) + 10) * 1000;
+    salaryAmount.textContent = salary.toLocaleString('ru-RU') + ' ₽';
     
-    if (data.bannedServices.length % 5 === 0) autoBackup();
+    addBalance(salary);
 };
 
 window.takeMoney = function() {
     const btn = document.querySelector('.btn-take');
     btn.textContent = 'Зачисление на карту...';
     setTimeout(() => {
-        location.reload();
+        btn.textContent = 'Деньги зачислены!';
+        setTimeout(() => {
+            modalOverlay.classList.remove('active');
+            isSpinning = false;
+            spinBtn.disabled = false;
+        }, 1000);
     }, 800);
 };
 
@@ -233,9 +198,9 @@ window.resetRoulette = function() {
     spinBtn.disabled = false;
 };
 
-window.addEventListener('beforeunload', () => {
-    const data = getStorageData();
-    if (data.bannedServices.length > 0 && !data.lastBackup) {
-        autoBackup();
-    }
+exportBtn.addEventListener('click', exportDB);
+importBtn.addEventListener('click', importDB);
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateBalanceDisplay();
 });
